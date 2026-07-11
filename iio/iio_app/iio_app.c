@@ -78,27 +78,38 @@
 #define UART_BAUDRATE_DEFAULT	115200
 #define UART_STOPBITS_DEFAULT	NO_OS_UART_STOP_1_BIT
 
+#if !defined(LINUX_PLATFORM) && !defined(NO_OS_NETWORKING) && !defined(NO_OS_LWIP_NETWORKING) && !defined(CONFIG_USB_UART_MAXIM) && !defined(CONFIG_USB_UART_STM32)
+#if defined(ADUCM_PLATFORM) || defined(MAXIM_PLATFORM)
+/* On these platforms no_os_uart_write() only queues data into the TX
+ * FIFO/DMA and returns before it is physically transmitted, so a delay
+ * is still needed before reinitializing the UART below. Xilinx and STM32
+ * uart_write() implementations block until transmission completes and
+ * don't need this. */
 static inline uint32_t _calc_uart_xfer_time(uint32_t len, uint32_t baudrate)
 {
 	uint32_t ms = 1000ul * len * 8 / UART_BAUDRATE_DEFAULT;
 	ms += ms / 10; // overhead
 	return ms;
 }
+#endif
 
-#if !defined(LINUX_PLATFORM) && !defined(NO_OS_NETWORKING) && !defined(NO_OS_LWIP_NETWORKING) && !defined(CONFIG_USB_UART_MAXIM) && !defined(CONFIG_USB_UART_STM32)
 static int32_t iio_print_uart_info_message(struct no_os_uart_desc **uart_desc,
 		struct no_os_uart_init_param *user_uart_params,
 		char *message, int32_t msglen)
 {
 	int32_t status;
+#if defined(ADUCM_PLATFORM) || defined(MAXIM_PLATFORM)
 	uint32_t delay_ms;
+#endif
 
 	status = no_os_uart_write(*uart_desc, (uint8_t *)message, msglen);
 	if (status < 0)
 		return status;
 
+#if defined(ADUCM_PLATFORM) || defined(MAXIM_PLATFORM)
 	delay_ms = _calc_uart_xfer_time(msglen, UART_BAUDRATE_DEFAULT);
 	no_os_mdelay(delay_ms);
+#endif
 
 	/** Reinitialize UART with parameters required by the IIO application */
 	no_os_uart_remove(*uart_desc);

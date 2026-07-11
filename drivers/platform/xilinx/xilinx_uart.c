@@ -190,6 +190,9 @@ static int32_t xil_uart_write(struct no_os_uart_desc *desc, const uint8_t *data,
 						  len);
 			offset += bytes_sent;
 		}
+		/* XUartPs_Send only queues data into the TX FIFO, wait here until
+		 * it has actually been shifted out so the call is blocking. */
+		while (XUartPs_IsSending(xil_uart_desc->instance));
 		break;
 #endif // XUARTPS_H
 	case UART_PL:

@@ -1,0 +1,1 @@
+/* Compatibility stub for the generic lwIP socket implementation. */
